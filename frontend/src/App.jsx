@@ -25,8 +25,10 @@ function AppShell() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/reports" element={<ReportTable />} />
+            <Route path="/reports" element={<ReportTable mode="manifest" />} />
             <Route path="/escalation" element={<Escalation />} />
+            <Route path="/ict-officers" element={<ReportTable mode="ictOfficers" />} />
+            <Route path="/contractors" element={<ReportTable mode="contractors" />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

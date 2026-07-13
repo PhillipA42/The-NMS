@@ -6,38 +6,93 @@ from .models import Network, Region, County, SubCounty, Site
 # ---------------------------------------------------------
 class SidebarSiteSerializer(serializers.ModelSerializer):
     label = serializers.CharField(source='site_code', read_only=True)
-    
+
     class Meta:
         model = Site
         fields = ['id', 'label', 'site_code', 'name', 'current_status']
 
+
 class SidebarSubCountySerializer(serializers.ModelSerializer):
     sites = SidebarSiteSerializer(many=True, read_only=True)
-    
+
     class Meta:
         model = SubCounty
         fields = ['id', 'name', 'sites']
 
+
 class SidebarCountySerializer(serializers.ModelSerializer):
     sub_counties = SidebarSubCountySerializer(many=True, read_only=True)
-    
+
     class Meta:
         model = County
         fields = ['id', 'name', 'sub_counties']
 
+
 class SidebarRegionSerializer(serializers.ModelSerializer):
     counties = SidebarCountySerializer(many=True, read_only=True)
-    
+
     class Meta:
         model = Region
         fields = ['id', 'name', 'counties']
 
+
 class SidebarNetworkSerializer(serializers.ModelSerializer):
     regions = SidebarRegionSerializer(many=True, read_only=True)
-    
+
     class Meta:
         model = Network
         fields = ['id', 'name', 'regions']
+
+
+# ---------------------------------------------------------
+# Dashboard / Polling Serializers
+# ---------------------------------------------------------
+class DashboardSummarySerializer(serializers.Serializer):
+    total_sites = serializers.IntegerField()
+    sites_up = serializers.IntegerField()
+    sites_down = serializers.IntegerField()
+    uptime = serializers.FloatField()
+
+
+class RegionStatusSerializer(serializers.Serializer):
+    region_name = serializers.CharField()
+    up_count = serializers.IntegerField()
+    down_count = serializers.IntegerField()
+    availability_score = serializers.FloatField()
+
+
+class RecentDownSiteSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    site_code = serializers.CharField()
+    name = serializers.CharField()
+    region = serializers.CharField()
+    county = serializers.CharField()
+    contractor = serializers.CharField()
+    last_ping_time = serializers.DateTimeField(allow_null=True)
+
+
+class EscalationOfficerSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    email = serializers.EmailField()
+    phone = serializers.CharField()
+    role = serializers.CharField()
+
+
+class EscalationSiteSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    site_code = serializers.CharField()
+    name = serializers.CharField()
+    region = serializers.CharField()
+    county = serializers.CharField()
+    down_since = serializers.DateTimeField(allow_null=True)
+
+
+class EscalationDataSerializer(serializers.Serializer):
+    contractor = serializers.CharField()
+    vendor_email = serializers.EmailField(allow_blank=True)
+    sites = EscalationSiteSerializer(many=True)
+    officers = EscalationOfficerSerializer(many=True)
 
 
 # ---------------------------------------------------------
