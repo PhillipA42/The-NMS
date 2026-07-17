@@ -6,6 +6,7 @@ import SidebarTree from './components/SidebarTree'
 import Dashboard from './components/Dashboard'
 import ReportTable from './components/ReportTable'
 import Escalation from './components/Escalation'
+import DataLoader from './components/DataLoader'
 import './App.css'
 
 /** Thin progress bar shown at the top of the viewport while any API call is in-flight */
@@ -19,14 +20,15 @@ function AppShell() {
   return (
     <>
       <GlobalLoadingBar />
-      <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
+      <div style={{ position: 'relative', minHeight: '100vh', backgroundColor: '#f1f5f9', margin: 0, padding: 0, overflow: 'hidden' }}>
         <SidebarTree />
-        <div style={{ padding: '2.5rem 3rem', flex: 1, fontFamily: 'Inter, sans-serif', overflowY: 'auto' }}>
+        <div style={{ padding: '2.5rem 0', width: '100vw', fontFamily: 'Inter, sans-serif', overflowY: 'auto', overflowX: 'hidden', minHeight: '100vh', boxSizing: 'border-box' }}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/reports" element={<ReportTable mode="manifest" />} />
             <Route path="/escalation" element={<Escalation />} />
+            <Route path="/data-loader" element={<DataLoader />} />
             <Route path="/ict-officers" element={<ReportTable mode="ictOfficers" />} />
             <Route path="/contractors" element={<ReportTable mode="contractors" />} />
             <Route path="*" element={<Navigate to="/" replace />} />

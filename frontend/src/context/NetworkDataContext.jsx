@@ -357,14 +357,34 @@ export const NetworkDataProvider = ({ children }) => {
   // Reference to the interval so we can reset it
   const intervalRef = useRef(null);
 
+  // Keep the current data values in refs so the fetch callback stays stable
+  const sidebarTreeRef = useRef(INITIAL_DATA.sidebarTree);
+  const recentDownRef = useRef(INITIAL_DATA.recentDown);
+  const escalationDataRef = useRef(INITIAL_DATA.escalationData);
+
+  const setSidebarTreeRef = useCallback((value) => {
+    sidebarTreeRef.current = value;
+    setSidebarTree(value);
+  }, []);
+
+  const setRecentDownRef = useCallback((value) => {
+    recentDownRef.current = value;
+    setRecentDown(value);
+  }, []);
+
+  const setEscalationDataRef = useCallback((value) => {
+    escalationDataRef.current = value;
+    setEscalationData(value);
+  }, []);
+
   /** Map of state-key → setter for dynamic dispatch */
   const setters = useMemo(() => ({
-    sidebarTree:      setSidebarTree,
+    sidebarTree:      setSidebarTreeRef,
     dashboardSummary: setDashboardSummary,
     regionStatus:     setRegionStatus,
-    recentDown:       setRecentDown,
-    escalationData:   setEscalationData,
-  }), []);
+    recentDown:       setRecentDownRef,
+    escalationData:   setEscalationDataRef,
+  }), [setSidebarTreeRef, setRecentDownRef, setEscalationDataRef]);
 
   /**
    * Core fetch routine.
@@ -389,9 +409,9 @@ export const NetworkDataProvider = ({ children }) => {
       nextValues[key] = data;
     });
 
-    const currentSidebarTree = nextValues.sidebarTree || sidebarTree;
-    const currentRecentDown = nextValues.recentDown || recentDown;
-    const currentEscalationData = nextValues.escalationData || escalationData;
+const currentSidebarTree = nextValues.sidebarTree || sidebarTreeRef.current;
+    const currentRecentDown = nextValues.recentDown || recentDownRef.current;
+    const currentEscalationData = nextValues.escalationData || escalationDataRef.current;
     const derivedState = buildDerivedNetworkState(
       currentSidebarTree,
       currentRecentDown,
@@ -416,7 +436,7 @@ export const NetworkDataProvider = ({ children }) => {
       hasLoadedOnce.current = true;
       setInitialLoading(false);
     }
-  }, [escalationData, recentDown, setters, sidebarTree]);
+  }, [setters]);
 
   /**
    * Public action: force an immediate refetch and reset the

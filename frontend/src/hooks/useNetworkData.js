@@ -25,10 +25,11 @@ export function useNetworkData() {
  * useSidebarData — data for the SidebarTree component.
  */
 export function useSidebarData() {
-  const { sidebarTree, initialLoading, errors } = useNetworkData();
+  const { sidebarTree, initialLoading, errors, refetchAll } = useNetworkData();
   return {
     sidebarTree,
     initialLoading,
+    refetchAll,
     error: errors.sidebarTree || null,
   };
 }

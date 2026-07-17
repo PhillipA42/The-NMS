@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useSidebarData } from '../hooks/useNetworkData';
 import './SidebarTree.css';
@@ -30,14 +30,6 @@ const EscalationIcon = () => (
     <path d="M10 14h4"></path>
     <path d="M8 6h8"></path>
     <path d="M5.5 4.5h13"></path>
-  </svg>
-);
-
-const UploadIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M12 3v12"></path>
-    <path d="m7 8 5-5 5 5"></path>
-    <path d="M5 15v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"></path>
   </svg>
 );
 
@@ -82,54 +74,20 @@ const ChevronIcon = ({ expanded }) => (
 );
 
 const normaliseSidebarTree = (tree = []) => {
-  const rootChildren = [];
-
-  (tree || []).forEach(root => {
-    const regions = (root.regions || []).map(region => {
-      const counties = (region.counties || []).map(county => {
-        const networks = (county.networks || []).map(network => ({
-          ...network,
-          id: network.id || `${county.name || 'county'}-${network.name || 'network'}`,
-          label: network.name || 'Network',
-          name: network.name || 'Network',
-          sites: [],
-          children: [],
-        }));
-
-        return {
-          ...county,
-          id: county.id || `${region.name || 'region'}-${county.name || 'county'}`,
-          label: county.name || 'County',
-          name: county.name || 'County',
-          sites: county.sites || [],
-          children: networks,
-          networks,
-        };
-      });
-
-      return {
-        ...region,
-        id: region.id || `${root.name || 'OGN'}-${region.name || 'region'}`,
-        label: region.name || 'Region',
-        name: region.name || 'Region',
-        counties,
-        children: counties,
-      };
-    });
-
-    if (regions.length > 0) {
-      rootChildren.push(...regions);
-    }
-  });
-
-  return [
-    {
-      id: 'ogn-root',
-      label: 'OGN',
-      name: 'OGN',
-      children: rootChildren,
-    },
-  ];
+  return tree.map(network => ({
+    ...network,
+    name: network.name || 'OGN',
+    regions: (network.regions || []).map(region => ({
+      ...region,
+      counties: (region.counties || []).map(county => ({
+        ...county,
+        sites: (county.sub_counties || []).flatMap(subCounty => (subCounty.sites || []).map(site => ({
+          ...site,
+          label: site.label || site.site_code,
+        }))),
+      })),
+    })),
+  }));
 };
 
 // Helper function to recursively count offline sites
@@ -138,21 +96,18 @@ const countDownSites = (node) => {
   if (node.sites) {
     count += node.sites.filter(site => site.current_status === false).length;
   }
-  if (node.children) {
-    count += node.children.filter(child => child.current_status === false).length;
-  }
   if (node.regions) node.regions.forEach(child => count += countDownSites(child));
   if (node.counties) node.counties.forEach(child => count += countDownSites(child));
+  if (node.sub_counties) node.sub_counties.forEach(child => count += countDownSites(child));
   return count;
 };
 
-const TreeNode = memo(function TreeNode({ node, level = 0 }) {
-  const [isExpanded, setIsExpanded] = useState(level < 3);
+const TreeNode = ({ node, level = 0 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const getChildren = (n) => {
     if (n.regions) return n.regions;
     if (n.counties) return n.counties;
-    if (n.children) return n.children;
     if (n.sites) return n.sites;
     return null;
   };
@@ -162,7 +117,6 @@ const TreeNode = memo(function TreeNode({ node, level = 0 }) {
   const displayName = node.label || node.name || 'OGN';
   const isLeaf = !hasChildren;
   const downCount = isLeaf ? 0 : countDownSites(node);
-  const isDetailNode = Boolean(node.children) && node.id && typeof node.id === 'string' && (node.id.endsWith('-code') || node.id.endsWith('-ip'));
 
   return (
     <div className={`tree-node level-${level}`}>
@@ -199,82 +153,38 @@ const TreeNode = memo(function TreeNode({ node, level = 0 }) {
       )}
     </div>
   );
-});
+};
 
 const SidebarTree = () => {
-  const { sidebarTree: sidebarTreeData, initialLoading, refetchAll } = useSidebarData();
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isOGNOpen, setIsOGNOpen] = useState(true);
+  const { sidebarTree, initialLoading } = useSidebarData();
+  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isOGNOpen, setIsOGNOpen] = useState(false);
+  const normalisedTree = useMemo(() => normaliseSidebarTree(sidebarTree), [sidebarTree]);
 
-  const sidebarTree = useMemo(() => {
-    if (Array.isArray(sidebarTreeData)) return sidebarTreeData;
-    if (sidebarTreeData && Array.isArray(sidebarTreeData.results)) return sidebarTreeData.results;
-    if (sidebarTreeData && Array.isArray(sidebarTreeData)) return sidebarTreeData;
-    return sidebarTreeData ? [sidebarTreeData] : [];
-  }, [sidebarTreeData]);
-
-  const normalisedTree = useMemo(() => {
-    const tree = Array.isArray(sidebarTree) ? sidebarTree : [];
-    const result = normaliseSidebarTree(tree);
-    return result;
-  }, [sidebarTree]);
-
-  useEffect(() => {
-    if (normalisedTree.some(node => node.children?.length)) {
-      setIsOGNOpen(true);
-    }
-  }, [normalisedTree]);
-
-  const primaryLinks = useMemo(() => [
+  const primaryLinks = [
     { to: '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
     { to: '/reports', label: 'Reports', icon: <ReportsIcon /> },
     { to: '/ict-officers', label: 'ICT Officers', icon: <OfficerIcon /> },
     { to: '/contractors', label: 'Contractors', icon: <ContractorIcon /> },
     { to: '/escalation', label: 'Escalation', icon: <EscalationIcon /> },
-    { to: '/data-loader', label: 'Load Data', icon: <UploadIcon /> },
-  ], []);
+  ];
 
   return (
-    <>
-      <button
-        className="sidebar-drawer-toggle"
-        type="button"
-        onClick={() => setIsDrawerOpen(prev => {
-          if (!prev) refetchAll();
-          return !prev;
-        })}
-        aria-label={isDrawerOpen ? 'Close sidebar' : 'Open sidebar'}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
-        </svg>
-      </button>
-      {isDrawerOpen && (
-        <div 
-          className="sidebar-backdrop"
-          onClick={() => setIsDrawerOpen(false)}
-          aria-hidden="true"
-        ></div>
-      )}
-      <div className={`sidebar-tree-container ${isDrawerOpen ? 'drawer-open' : 'drawer-closed'}`}>
-        <div className="sidebar-header">
-          <div className="sidebar-header-left">
-            <button
-              className="sidebar-close-button"
-              type="button"
-              onClick={() => setIsDrawerOpen(() => false)}
-              aria-label="Close sidebar"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6"></polyline>
-              </svg>
-            </button>
-<h2>OGN Network</h2>
-          </div>
-          <div className="pulse-indicator"></div>
+    <div className={`sidebar-tree-container ${isCollapsed ? 'collapsed' : ''}`}>
+      <div className="sidebar-header">
+        <div className="sidebar-header-left">
+          <button
+            className="sidebar-collapse-toggle"
+            type="button"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <span>{isCollapsed ? 'ΓÇ║' : 'ΓÇ╣'}</span>
+          </button>
+          <h2>OGN Network</h2>
         </div>
+        <div className="pulse-indicator"></div>
+      </div>
 
       <div className="sidebar-tree-content">
         <div className="sidebar-nav-group">
@@ -294,6 +204,9 @@ const SidebarTree = () => {
             className={`sidebar-ogn-toggle ${isOGNOpen ? 'active' : ''}`}
             onClick={() => {
               setIsOGNOpen(!isOGNOpen);
+              if (isCollapsed) {
+                setIsCollapsed(false);
+              }
             }}
           >
             <span className="sidebar-nav-icon" aria-hidden="true"><OGNIcon /></span>
@@ -301,7 +214,7 @@ const SidebarTree = () => {
           </button>
         </div>
 
-        {isOGNOpen && (
+        {isOGNOpen && !isCollapsed && (
           <div className="sidebar-ogn-tree">
             {initialLoading ? (
               <div className="loading-skeleton">
@@ -311,27 +224,14 @@ const SidebarTree = () => {
                 <div className="skeleton-bar" style={{ width: '40%', marginLeft: '2.5rem' }}></div>
               </div>
             ) : (
-              <div>
-                {normalisedTree.length > 0 ? (
-                  normalisedTree.map(node => (
-                    <TreeNode key={node.id} node={node} level={0} />
-                  ))
-                ) : (
-                  <div className="tree-node level-0">
-                    <div className="node-content leaf-node" style={{ paddingLeft: '0.75rem' }}>
-                      <div className="node-label-wrapper">
-                        <span className="node-label">No regions available</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              normalisedTree.map(network => (
+                <TreeNode key={network.id} node={network} level={0} />
+              ))
             )}
           </div>
         )}
       </div>
-      </div>
-    </>
+    </div>
   );
 };
 

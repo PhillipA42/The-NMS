@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="OGN Logo">
+  <defs>
+    <linearGradient id="redGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e11d48"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+    <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="24" fill="#ffffff"/>
+  <circle cx="60" cy="60" r="50" fill="none" stroke="url(#redGradient)" stroke-width="14" stroke-linecap="round" stroke-dasharray="80 300" transform="rotate(-20 60 60)"/>
+  <path d="M 20 55 C 40 15, 90 15, 95 65" fill="none" stroke="#000000" stroke-width="14" stroke-linecap="round"/>
+  <path d="M 35 90 C 55 75, 90 70, 92 75" fill="none" stroke="url(#greenGradient)" stroke-width="14" stroke-linecap="round"/>
+</svg>

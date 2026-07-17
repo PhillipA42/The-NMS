@@ -1,5 +1,5 @@
-import React from 'react';
-import { useDashboardData } from '../hooks/useNetworkData';
+import React, { useMemo } from 'react';
+import { useDashboardData, useNetworkData } from '../hooks/useNetworkData';
 import './Dashboard.css';
 
 const KPICard = ({ title, value, type }) => {
@@ -46,23 +46,21 @@ const formatTimestamp = (isoValue) => {
 
 const Dashboard = () => {
   const {
-    dashboardSummary,
-    regionStatus,
-    recentDown,
+    dashboardSummary: metrics,
+    regionStatus: regionRows,
+    recentDown: recentRows,
     initialLoading,
     lastRefreshedAt,
+    triggerLivePoll,
     errors,
   } = useDashboardData();
 
-  const metrics = dashboardSummary || {
-    total_sites: 0,
-    sites_up: 0,
-    sites_down: 0,
-    uptime: 0,
-  };
+  const hasDataError = Boolean(errors.dashboardSummary || errors.regionStatus || errors.recentDown);
 
-  const regionRows = Array.isArray(regionStatus) ? regionStatus : [];
-  const recentRows = Array.isArray(recentDown) ? recentDown : [];
+  // Debug panel values to help debug missing data
+  const { reportTable, sidebarTree } = useNetworkData();
+
+  const safeMetrics = metrics || { total_sites: 0, sites_up: 0, sites_down: 0, uptime: 0 };
 
   return (
     <div className="dashboard-container">
@@ -71,10 +69,24 @@ const Dashboard = () => {
           <h1 className="dashboard-title">Network Overview</h1>
           <p className="dashboard-subtitle">Real-time status of OGN infrastructure</p>
         </div>
-        <p className="dashboard-subtitle" style={{ marginTop: '0.75rem' }}>
-          {lastRefreshedAt ? `Last refresh: ${formatTimestamp(lastRefreshedAt)}` : 'Waiting for backend sync'}
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <p className="dashboard-subtitle" style={{ marginTop: '0.75rem', marginBottom: 0 }}>
+            {lastRefreshedAt ? `Last refresh: ${formatTimestamp(lastRefreshedAt)}` : 'Waiting for backend sync'}
+          </p>
+          <button
+            className="refresh-btn"
+            type="button"
+            onClick={() => {
+              try { triggerLivePoll(); } catch (e) { /* ignore */ }
+            }}
+            style={{ padding: '0.4rem 0.75rem', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff' }}
+          >
+            Poll Live Status
+          </button>
+        </div>
       </div>
+
+      {/* Debug panel removed — dashboard now displays derived live data from the context */}
 
       {initialLoading ? (
         <div className="kpi-grid">
@@ -85,12 +97,14 @@ const Dashboard = () => {
             </div>
           ))}
         </div>
+      ) : hasDataError ? (
+        <div className="empty-state">No live data available yet.</div>
       ) : (
         <div className="kpi-grid">
-          <KPICard title="Total Sites" value={metrics.total_sites} type="neutral" />
-          <KPICard title="Sites Up" value={metrics.sites_up} type="success" />
-          <KPICard title="Sites Down" value={metrics.sites_down} type="danger" />
-          <KPICard title="Uptime %" value={`${metrics.uptime.toFixed(1)}%`} type="info" />
+          <KPICard title="Total Sites" value={safeMetrics.total_sites} type="neutral" />
+          <KPICard title="Sites Up" value={safeMetrics.sites_up} type="success" />
+          <KPICard title="Sites Down" value={safeMetrics.sites_down} type="danger" />
+          <KPICard title="Uptime %" value={`${Number(safeMetrics.uptime).toFixed(1)}%`} type="info" />
         </div>
       )}
 
@@ -98,7 +112,7 @@ const Dashboard = () => {
         <div className="dashboard-panel table-panel">
           <h3>Status by Region</h3>
           {errors.regionStatus ? (
-            <div className="empty-state">Unable to load region status table.</div>
+            <div className="empty-state">No region data available yet.</div>
           ) : initialLoading ? (
             <div className="table-loading-skeleton">
               <div className="skeleton-line"></div>
@@ -136,7 +150,7 @@ const Dashboard = () => {
         <div className="dashboard-panel side-panel">
           <h3>Recent down sites</h3>
           {errors.recentDown ? (
-            <div className="empty-state">Unable to load recent down sites.</div>
+            <div className="empty-state">No recent down-site data available yet.</div>
           ) : initialLoading ? (
             <div className="table-loading-skeleton">
               <div className="skeleton-line"></div>

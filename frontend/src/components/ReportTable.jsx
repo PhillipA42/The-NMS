@@ -1,41 +1,37 @@
 import React, { useState, useMemo } from 'react';
-import { useSidebarData } from '../hooks/useNetworkData';
+import useApi from '../hooks/useApi';
+import { useNetworkData } from '../hooks/useNetworkData';
+import ENDPOINTS from '../services/endpoints';
 import './ReportTable.css';
 
-const CONTRACTOR_ROWS = [
-  { id: 1, region: 'Nyanza', county: 'Migori', company: 'Safaricom Business', email: 'noc@safaricom.co.ke' },
-  { id: 2, region: 'Nyanza', county: 'Migori', company: 'Liquid Intelligent Tech', email: 'support@liquidtelecom.com' },
-  { id: 3, region: 'Nyanza', county: 'Kisumu', company: 'Safaricom Business', email: 'noc@safaricom.co.ke' },
-  { id: 4, region: 'Coast', county: 'Mombasa', company: 'Liquid Intelligent Tech', email: 'support@liquidtelecom.com' },
-  { id: 5, region: 'Coast', county: 'Kilifi', company: 'Safaricom Business', email: 'noc@safaricom.co.ke' },
-];
+const normalizeContractorRow = (row) => ({
+  id: row.id,
+  region: row.region || '',
+  county: row.county || '',
+  company: row.company_name || '',
+  email: row.email || '',
+  phone: row.phone || '',
+});
 
-const ICT_OFFICER_ROWS = [
-  { id: 1, region: 'Nyanza', county: 'Migori', name: 'James Ochieng', email: 'j.ochieng@ogn.go.ke', phone: '+254 712 345 678' },
-  { id: 2, region: 'Nyanza', county: 'Migori', name: 'Jane Akinyi', email: 'j.akinyi@ogn.go.ke', phone: '+254 721 223 344' },
-  { id: 3, region: 'Nyanza', county: 'Kisumu', name: 'Catherine Wanjiku', email: 'c.wanjiku@ogn.go.ke', phone: '+254 745 678 901' },
-  { id: 4, region: 'Coast', county: 'Mombasa', name: 'Ali Mwangangi', email: 'a.mwangangi@ogn.go.ke', phone: '+254 783 910 111' },
-];
+const normalizeOfficerRow = (row) => ({
+  id: row.id,
+  region: row.assigned_region || '',
+  county: '',
+  name: row.name || '',
+  email: row.email || '',
+  phone: row.phone || '',
+});
 
-const flattenSidebarSites = (tree = []) => {
-  return tree.flatMap(network =>
-    (network.regions || []).flatMap(region =>
-      (region.counties || []).flatMap(county =>
-        (county.sub_counties || []).flatMap(subCounty =>
-          (subCounty.sites || []).map(site => ({
-            id: site.id || site.site_code || `${region.name}-${county.name}-${site.name}`,
-            region: region.name || '',
-            county: county.name || '',
-            site_code: site.site_code || site.label || '',
-            name: site.name || site.label || site.site_code || '',
-            status: site.current_status === undefined ? true : Boolean(site.current_status),
-            last_polled: site.last_polled || site.last_ping_time || 'Unknown',
-          }))
-        )
-      )
-    )
-  );
-};
+const normalizeManifestRow = (row = {}) => ({
+  id: row.id,
+  region: row.region_name || '',
+  county: row.county_name || '',
+  name: row.site_name || row.name || '',
+  sitename: row.site_name || row.name || '',
+  ipAddress: row.ip_address || '',
+  currentStatus: row.current_status === undefined ? true : Boolean(row.current_status),
+  lastping: row.last_ping || row.last_ping_time || 'Unknown',
+});
 
 const computeRowSpans = (data) => {
   const spans = { region: {}, county: {} };
@@ -71,15 +67,38 @@ const ReportTable = ({ mode = 'manifest' }) => {
   const isManifestMode = mode === 'manifest';
   const isContractorMode = mode === 'contractors';
   const isIctMode = mode === 'ictOfficers';
-  const { sidebarTree, initialLoading } = useSidebarData();
+  const { data: manifestData, loading: manifestLoading } = useApi(ENDPOINTS.REPORTS_TABLE, {
+    immediate: isManifestMode,
+  });
+  const { data: contractorData, loading: contractorLoading } = useApi(ENDPOINTS.CONTRACTORS, {
+    immediate: isContractorMode,
+  });
+  const { data: officerData, loading: officerLoading } = useApi(ENDPOINTS.ICT_OFFICERS, {
+    immediate: isIctMode,
+  });
 
-  const manifestRows = useMemo(() => flattenSidebarSites(sidebarTree), [sidebarTree]);
+  const { reportTable } = useNetworkData();
+
+  const manifestRows = useMemo(() => {
+    const source = Array.isArray(reportTable) && reportTable.length > 0 ? reportTable : manifestData;
+    return Array.isArray(source) ? source.map(normalizeManifestRow) : [];
+  }, [manifestData, reportTable]);
+  const contractorRows = useMemo(
+    () => Array.isArray(contractorData) ? contractorData.map(normalizeContractorRow) : [],
+    [contractorData]
+  );
+  const officerRows = useMemo(
+    () => Array.isArray(officerData) ? officerData.map(normalizeOfficerRow) : [],
+    [officerData]
+  );
 
   const tableRows = useMemo(() => {
-    if (isContractorMode) return CONTRACTOR_ROWS;
-    if (isIctMode) return ICT_OFFICER_ROWS;
+    if (isContractorMode) return contractorRows;
+    if (isIctMode) return officerRows;
     return manifestRows;
-  }, [isContractorMode, isIctMode, manifestRows]);
+  }, [contractorRows, officerRows, isContractorMode, isIctMode, manifestRows]);
+
+  const isTableLoading = isManifestMode ? manifestLoading : isContractorMode ? contractorLoading : officerLoading;
 
   const title = isIctMode ? 'ICT Officers' : isContractorMode ? 'Contractors' : 'Network Manifest';
   const subtitle = isIctMode
@@ -237,7 +256,7 @@ const ReportTable = ({ mode = 'manifest' }) => {
       </div>
 
       <div className="report-table-wrapper">
-        {initialLoading && isManifestMode ? (
+        {isTableLoading ? (
           <div className="loading-skeleton">
             <div className="skeleton-bar" style={{ width: '80%' }}></div>
             <div className="skeleton-bar" style={{ width: '60%', marginLeft: '1.25rem' }}></div>
@@ -253,9 +272,12 @@ const ReportTable = ({ mode = 'manifest' }) => {
                 <th>County</th>
                 {isManifestMode ? (
                   <>
-                    <th>Site Name</th>
-                    <th className="text-center">Status</th>
-                    <th>Last Polled</th>
+                    <th>Name</th>
+                    <th>County</th>
+                    <th>SiteName</th>
+                    <th>IP Address</th>
+                    <th className="text-center">Current Status</th>
+                    <th>LastPing</th>
                   </>
                 ) : isContractorMode ? (
                   <>
@@ -287,12 +309,15 @@ const ReportTable = ({ mode = 'manifest' }) => {
                   {isManifestMode ? (
                     <>
                       <td className="font-medium text-main">{row.name}</td>
+                      <td>{row.county}</td>
+                      <td>{row.sitename}</td>
+                      <td>{row.ipAddress}</td>
                       <td className="status-cell">
-                        <div className={`status-box ${row.status ? 'status-up' : 'status-down'}`}>
-                          {row.status ? '1' : '0'}
+                        <div className={`status-box ${row.currentStatus ? 'status-up' : 'status-down'}`}>
+                          {row.currentStatus ? 'Up' : 'Down'}
                         </div>
                       </td>
-                      <td>{row.last_polled}</td>
+                      <td>{row.lastping === 'Unknown' ? 'Unknown' : new Date(row.lastping).toLocaleString()}</td>
                     </>
                   ) : isContractorMode ? (
                     <>
