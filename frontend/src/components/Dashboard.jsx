@@ -1,33 +1,38 @@
-import React, { useMemo } from 'react';
-import { useDashboardData, useNetworkData } from '../hooks/useNetworkData';
+import React from 'react';
+import { useDashboardData } from '../hooks/useNetworkData';
+import logo from '../assets/logo.png';
 import './Dashboard.css';
 
 const KPICard = ({ title, value, type }) => {
+  const cardClass = {
+    neutral: 'kpi-neutral',
+    success: 'kpi-success',
+    danger: 'kpi-danger',
+    info: 'kpi-info',
+  }[type] || 'kpi-neutral';
+
   return (
-    <div className={`kpi-card kpi-${type}`}>
+    <div className={`kpi-card ${cardClass}`}>
+      <div className="kpi-accent-line" />
       <div className="kpi-header">
         <h3 className="kpi-title">{title}</h3>
       </div>
       <div className="kpi-body">
-        <span className="kpi-value">{value}</span>
+        <p className="kpi-value">{value}</p>
       </div>
-      <div className="kpi-accent-line"></div>
     </div>
   );
 };
 
 const ProgressBar = ({ percentage }) => {
-  let colorClass = 'bar-excellent';
-  if (percentage < 80) colorClass = 'bar-critical';
-  else if (percentage < 95) colorClass = 'bar-warning';
+  let barClass = 'bar-excellent';
+  if (percentage < 80) barClass = 'bar-critical';
+  else if (percentage < 95) barClass = 'bar-warning';
 
   return (
     <div className="progress-bar-container">
       <div className="progress-bar-background">
-        <div
-          className={`progress-bar-fill ${colorClass}`}
-          style={{ width: `${Math.max(0, Math.min(100, percentage))}%` }}
-        ></div>
+        <div className={`progress-bar-fill ${barClass}`} style={{ width: `${Math.max(0, Math.min(100, percentage))}%` }} />
       </div>
       <span className="progress-bar-text">{percentage.toFixed(1)}%</span>
     </div>
@@ -56,44 +61,41 @@ const Dashboard = () => {
   } = useDashboardData();
 
   const hasDataError = Boolean(errors.dashboardSummary || errors.regionStatus || errors.recentDown);
-
-  // Debug panel values to help debug missing data
-  const { reportTable, sidebarTree } = useNetworkData();
-
   const safeMetrics = metrics || { total_sites: 0, sites_up: 0, sites_down: 0, uptime: 0 };
 
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
-        <div>
-          <h1 className="dashboard-title">Network Overview</h1>
-          <p className="dashboard-subtitle">Real-time status of OGN infrastructure</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <p className="dashboard-subtitle" style={{ marginTop: '0.75rem', marginBottom: 0 }}>
-            {lastRefreshedAt ? `Last refresh: ${formatTimestamp(lastRefreshedAt)}` : 'Waiting for backend sync'}
-          </p>
-          <button
-            className="refresh-btn"
-            type="button"
-            onClick={() => {
-              try { triggerLivePoll(); } catch (e) { /* ignore */ }
-            }}
-            style={{ padding: '0.4rem 0.75rem', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff' }}
-          >
-            Poll Live Status
-          </button>
+        <div className="dashboard-header-content">
+          <div className="dashboard-title-group">
+            <div className="dashboard-brand">
+              <img src={logo} alt="Company logo" className="dashboard-logo" />
+            </div>
+          </div>
+          <div className="dashboard-header-actions">
+            <p className="dashboard-refresh-text">
+              {lastRefreshedAt ? `Last refresh: ${formatTimestamp(lastRefreshedAt)}` : 'Waiting for backend sync'}
+            </p>
+            <button
+              className="dashboard-refresh-button"
+              type="button"
+              onClick={() => {
+                try { triggerLivePoll(); } catch (e) { /* ignore */ }
+              }}
+            >
+              Poll Live Status
+            </button>
+          </div>
         </div>
       </div>
-
-      {/* Debug panel removed — dashboard now displays derived live data from the context */}
 
       {initialLoading ? (
         <div className="kpi-grid">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="kpi-card loading-card">
-              <div className="skeleton-line skeleton-title"></div>
-              <div className="skeleton-line skeleton-value"></div>
+            <div key={index} className="kpi-card kpi-neutral">
+              <div className="kpi-accent-line" />
+              <div className="kpi-header" />
+              <div className="kpi-body" />
             </div>
           ))}
         </div>
@@ -109,25 +111,23 @@ const Dashboard = () => {
       )}
 
       <div className="dashboard-content-main">
-        <div className="dashboard-panel table-panel">
+        <div className="dashboard-panel">
           <h3>Status by Region</h3>
           {errors.regionStatus ? (
             <div className="empty-state">No region data available yet.</div>
           ) : initialLoading ? (
-            <div className="table-loading-skeleton">
-              <div className="skeleton-line"></div>
-              <div className="skeleton-line"></div>
-              <div className="skeleton-line"></div>
+            <div className="table-responsive">
+              <div className="empty-state">Loading region data...</div>
             </div>
           ) : (
             <div className="table-responsive">
               <table className="region-table">
                 <thead>
                   <tr>
-                    <th>Region Name</th>
-                    <th>Up Count</th>
-                    <th>Down Count</th>
-                    <th>Availability Score</th>
+                    <th>Region</th>
+                    <th>Up</th>
+                    <th>Down</th>
+                    <th>Availability</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -136,9 +136,7 @@ const Dashboard = () => {
                       <td className="font-medium text-main">{region.region_name}</td>
                       <td className="text-success">{region.up_count}</td>
                       <td className={region.down_count > 0 ? 'text-danger' : 'text-muted'}>{region.down_count}</td>
-                      <td>
-                        <ProgressBar percentage={region.availability_score} />
-                      </td>
+                      <td><ProgressBar percentage={region.availability_score} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -147,15 +145,13 @@ const Dashboard = () => {
           )}
         </div>
 
-        <div className="dashboard-panel side-panel">
-          <h3>Recent down sites</h3>
+        <div className="dashboard-panel">
+          <h3>Recent Down Sites</h3>
           {errors.recentDown ? (
             <div className="empty-state">No recent down-site data available yet.</div>
           ) : initialLoading ? (
-            <div className="table-loading-skeleton">
-              <div className="skeleton-line"></div>
-              <div className="skeleton-line"></div>
-              <div className="skeleton-line"></div>
+            <div className="side-table-responsive">
+              <div className="empty-state">Loading site data...</div>
             </div>
           ) : recentRows.length === 0 ? (
             <div className="empty-state">No down sites currently reported.</div>

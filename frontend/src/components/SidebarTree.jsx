@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useSidebarData } from '../hooks/useNetworkData';
 import './SidebarTree.css';
@@ -66,7 +66,6 @@ const ContractorIcon = () => (
   </svg>
 );
 
-// SVG Chevron Icon
 const ChevronIcon = ({ expanded }) => (
   <svg
     className={`chevron-icon ${expanded ? 'expanded' : ''}`}
@@ -82,10 +81,10 @@ const ChevronIcon = ({ expanded }) => (
 );
 
 const normaliseSidebarTree = (tree = []) => {
-  const rootChildren = [];
+  const regions = [];
 
   (tree || []).forEach(root => {
-    const regions = (root.regions || []).map(region => {
+    (root.regions || []).forEach(region => {
       const counties = (region.counties || []).map(county => {
         const networks = (county.networks || []).map(network => ({
           ...network,
@@ -107,32 +106,20 @@ const normaliseSidebarTree = (tree = []) => {
         };
       });
 
-      return {
+      regions.push({
         ...region,
         id: region.id || `${root.name || 'OGN'}-${region.name || 'region'}`,
         label: region.name || 'Region',
         name: region.name || 'Region',
         counties,
         children: counties,
-      };
+      });
     });
-
-    if (regions.length > 0) {
-      rootChildren.push(...regions);
-    }
   });
 
-  return [
-    {
-      id: 'ogn-root',
-      label: 'OGN',
-      name: 'OGN',
-      children: rootChildren,
-    },
-  ];
+  return regions;
 };
 
-// Helper function to recursively count offline sites
 const countDownSites = (node) => {
   let count = 0;
   if (node.sites) {
@@ -162,7 +149,6 @@ const TreeNode = memo(function TreeNode({ node, level = 0 }) {
   const displayName = node.label || node.name || 'OGN';
   const isLeaf = !hasChildren;
   const downCount = isLeaf ? 0 : countDownSites(node);
-  const isDetailNode = Boolean(node.children) && node.id && typeof node.id === 'string' && (node.id.endsWith('-code') || node.id.endsWith('-ip'));
 
   return (
     <div className={`tree-node level-${level}`}>
@@ -201,105 +187,46 @@ const TreeNode = memo(function TreeNode({ node, level = 0 }) {
   );
 });
 
-const SidebarTree = () => {
-  const { sidebarTree: sidebarTreeData, initialLoading, refetchAll } = useSidebarData();
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [shouldRenderContent, setShouldRenderContent] = useState(false);
+const SidebarTree = ({ isCollapsed, onToggleCollapsed }) => {
+  const { sidebarTree: sidebarTreeData, initialLoading } = useSidebarData();
   const [isOGNOpen, setIsOGNOpen] = useState(true);
-  const hasRequestedRefreshRef = useRef(false);
 
   const sidebarTree = useMemo(() => {
     if (Array.isArray(sidebarTreeData)) return sidebarTreeData;
     if (sidebarTreeData && Array.isArray(sidebarTreeData.results)) return sidebarTreeData.results;
-    if (sidebarTreeData && Array.isArray(sidebarTreeData)) return sidebarTreeData;
     return sidebarTreeData ? [sidebarTreeData] : [];
   }, [sidebarTreeData]);
 
   const normalisedTree = useMemo(() => {
     const tree = Array.isArray(sidebarTree) ? sidebarTree : [];
-    const result = normaliseSidebarTree(tree);
-    return result;
+    return normaliseSidebarTree(tree);
   }, [sidebarTree]);
 
-  useEffect(() => {
-    if (normalisedTree.some(node => node.children?.length)) {
-      setIsOGNOpen(true);
-    }
-  }, [normalisedTree]);
-
-  useEffect(() => {
-    if (!isDrawerOpen) {
-      setShouldRenderContent(false);
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      setShouldRenderContent(true);
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [isDrawerOpen]);
-
-  const handleToggleDrawer = () => {
-    setIsDrawerOpen(prev => {
-      const next = !prev;
-
-      if (next && !hasRequestedRefreshRef.current) {
-        hasRequestedRefreshRef.current = true;
-        window.setTimeout(() => refetchAll(), 0);
-      }
-
-      return next;
-    });
-  };
-
-  const primaryLinks = useMemo(() => [
+  const primaryLinks = [
     { to: '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
     { to: '/reports', label: 'Reports', icon: <ReportsIcon /> },
     { to: '/ict-officers', label: 'ICT Officers', icon: <OfficerIcon /> },
     { to: '/contractors', label: 'Contractors', icon: <ContractorIcon /> },
     { to: '/escalation', label: 'Escalation', icon: <EscalationIcon /> },
     { to: '/data-loader', label: 'Load Data', icon: <UploadIcon /> },
-  ], []);
+  ];
 
   return (
-    <>
-      <button
-        className="sidebar-drawer-toggle"
-        type="button"
-        onClick={handleToggleDrawer}
-        aria-label={isDrawerOpen ? 'Close sidebar' : 'Open sidebar'}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
-        </svg>
-      </button>
-      {isDrawerOpen && (
-        <div 
-          className="sidebar-backdrop"
-          onClick={() => setIsDrawerOpen(false)}
-          aria-hidden="true"
-        ></div>
-      )}
-      <div className={`sidebar-tree-container ${isDrawerOpen ? 'drawer-open' : 'drawer-closed'}`}>
-        <div className="sidebar-header">
-          <div className="sidebar-header-left">
-            <button
-              className="sidebar-close-button"
-              type="button"
-              onClick={() => setIsDrawerOpen(() => false)}
-              aria-label="Close sidebar"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6"></polyline>
-              </svg>
-            </button>
-<h2>OGN Network</h2>
-          </div>
-          <div className="pulse-indicator"></div>
+    <div className={`sidebar-tree-container ${isCollapsed ? 'collapsed' : ''}`}>
+      <div className="sidebar-header">
+        <div className="sidebar-header-left">
+          <button
+            className="sidebar-collapse-toggle"
+            type="button"
+            onClick={onToggleCollapsed}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <span>{isCollapsed ? '▹' : '◃'}</span>
+          </button>
+          {!isCollapsed && <h2>NEXIS</h2>}
         </div>
+        {!isCollapsed && <div className="pulse-indicator"></div>}
+      </div>
 
       <div className="sidebar-tree-content">
         <div className="sidebar-nav-group">
@@ -310,7 +237,7 @@ const SidebarTree = () => {
               className={({ isActive }) => `sidebar-nav-link ${isActive ? 'active' : ''}`}
             >
               <span className="sidebar-nav-icon" aria-hidden="true">{link.icon}</span>
-              <span className="sidebar-nav-label">{link.label}</span>
+              {!isCollapsed && <span className="sidebar-nav-label">{link.label}</span>}
             </NavLink>
           ))}
 
@@ -319,15 +246,28 @@ const SidebarTree = () => {
             className={`sidebar-ogn-toggle ${isOGNOpen ? 'active' : ''}`}
             onClick={() => {
               setIsOGNOpen(!isOGNOpen);
+              if (isCollapsed) {
+                onToggleCollapsed();
+              }
             }}
+            aria-expanded={isOGNOpen}
           >
             <span className="sidebar-nav-icon" aria-hidden="true"><OGNIcon /></span>
-            <span className="sidebar-nav-label">OGN</span>
+            {!isCollapsed && (
+              <>
+                <span className="sidebar-nav-label">OGN</span>
+                <span className={`sidebar-ogn-chevron ${isOGNOpen ? 'open' : ''}`} aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </span>
+              </>
+            )}
           </button>
         </div>
 
-        {shouldRenderContent && (
-          <div className="sidebar-ogn-tree">
+        {!isCollapsed && (
+          <div className={`sidebar-ogn-tree ${isOGNOpen ? 'open' : 'closed'}`}>
             {initialLoading ? (
               <div className="loading-skeleton">
                 <div className="skeleton-bar" style={{ width: '80%' }}></div>
@@ -336,27 +276,14 @@ const SidebarTree = () => {
                 <div className="skeleton-bar" style={{ width: '40%', marginLeft: '2.5rem' }}></div>
               </div>
             ) : (
-              <div>
-                {normalisedTree.length > 0 ? (
-                  normalisedTree.map(node => (
-                    <TreeNode key={node.id} node={node} level={0} />
-                  ))
-                ) : (
-                  <div className="tree-node level-0">
-                    <div className="node-content leaf-node" style={{ paddingLeft: '0.75rem' }}>
-                      <div className="node-label-wrapper">
-                        <span className="node-label">No regions available</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              normalisedTree.map(node => (
+                <TreeNode key={node.id} node={node} level={0} />
+              ))
             )}
           </div>
         )}
       </div>
-      </div>
-    </>
+    </div>
   );
 };
 

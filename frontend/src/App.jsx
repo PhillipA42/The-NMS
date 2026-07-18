@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { LoadingProvider, useLoading } from './context/LoadingContext'
 import { NetworkDataProvider } from './context/NetworkDataContext'
@@ -17,12 +17,17 @@ const GlobalLoadingBar = () => {
 }
 
 function AppShell() {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+
   return (
     <>
       <GlobalLoadingBar />
-      <div style={{ position: 'relative', minHeight: '100vh', backgroundColor: '#f1f5f9', margin: 0, padding: 0, overflow: 'hidden' }}>
-        <SidebarTree />
-        <div style={{ padding: '2.5rem 0', width: '100vw', fontFamily: 'Inter, sans-serif', overflowY: 'auto', overflowX: 'hidden', minHeight: '100vh', boxSizing: 'border-box' }}>
+      <div className={`app-shell ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <SidebarTree
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapsed={() => setIsSidebarCollapsed(prev => !prev)}
+        />
+        <main className="app-main-content">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
@@ -33,7 +38,7 @@ function AppShell() {
             <Route path="/contractors" element={<ReportTable mode="contractors" />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </div>
+        </main>
       </div>
     </>
   )
