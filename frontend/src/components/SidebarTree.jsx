@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useSidebarData } from '../hooks/useNetworkData';
 import './SidebarTree.css';
@@ -204,7 +204,9 @@ const TreeNode = memo(function TreeNode({ node, level = 0 }) {
 const SidebarTree = () => {
   const { sidebarTree: sidebarTreeData, initialLoading, refetchAll } = useSidebarData();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [shouldRenderContent, setShouldRenderContent] = useState(false);
   const [isOGNOpen, setIsOGNOpen] = useState(true);
+  const hasRequestedRefreshRef = useRef(false);
 
   const sidebarTree = useMemo(() => {
     if (Array.isArray(sidebarTreeData)) return sidebarTreeData;
@@ -225,6 +227,32 @@ const SidebarTree = () => {
     }
   }, [normalisedTree]);
 
+  useEffect(() => {
+    if (!isDrawerOpen) {
+      setShouldRenderContent(false);
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      setShouldRenderContent(true);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isDrawerOpen]);
+
+  const handleToggleDrawer = () => {
+    setIsDrawerOpen(prev => {
+      const next = !prev;
+
+      if (next && !hasRequestedRefreshRef.current) {
+        hasRequestedRefreshRef.current = true;
+        window.setTimeout(() => refetchAll(), 0);
+      }
+
+      return next;
+    });
+  };
+
   const primaryLinks = useMemo(() => [
     { to: '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
     { to: '/reports', label: 'Reports', icon: <ReportsIcon /> },
@@ -239,10 +267,7 @@ const SidebarTree = () => {
       <button
         className="sidebar-drawer-toggle"
         type="button"
-        onClick={() => setIsDrawerOpen(prev => {
-          if (!prev) refetchAll();
-          return !prev;
-        })}
+        onClick={handleToggleDrawer}
         aria-label={isDrawerOpen ? 'Close sidebar' : 'Open sidebar'}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -301,7 +326,7 @@ const SidebarTree = () => {
           </button>
         </div>
 
-        {isOGNOpen && (
+        {shouldRenderContent && (
           <div className="sidebar-ogn-tree">
             {initialLoading ? (
               <div className="loading-skeleton">
