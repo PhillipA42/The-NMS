@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useEscalationData } from '../hooks/useNetworkData';
+import logo from '../assets/logo.png';
 import './Escalation.css';
 
 const generateEmailBody = (contractor, sites) => {
@@ -100,13 +101,16 @@ const Escalation = () => {
   return (
     <div className="escalation-container">
       <div className="escalation-header">
-        <div>
+        <div className="escalation-branding">
+          <img src={logo} alt="Company logo" className="escalation-logo" />
+        </div>
+        <div className="escalation-heading-block">
           <h1 className="escalation-title">Escalation Board</h1>
           <p className="escalation-subtitle">Unreachable sites grouped by servicing contractor</p>
-        </div>
-        <div className="escalation-summary">
-          <span className="summary-count">{totalDownSites}</span>
-          <span className="summary-label">sites down</span>
+          <div className="escalation-summary">
+            <span className="summary-count">{totalDownSites}</span>
+            <span className="summary-label">sites down</span>
+          </div>
         </div>
       </div>
 
@@ -130,7 +134,6 @@ const Escalation = () => {
                 <div className="contractor-card-header">
                   <h2 className="contractor-name">{contractor}</h2>
                   <div className="contractor-header-actions">
-                    <span className="contractor-badge">{sites.length} site{sites.length !== 1 ? 's' : ''} down</span>
                     <button className="email-contractor-btn" onClick={() => openMailClient(contractor, sites, officers)}>
                       <MailIcon /> Compose Email
                     </button>

@@ -2,9 +2,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 .escalation-container {
-  width: 100vw;
-  max-width: none;
-  padding: 0 1.5rem;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.25rem 2rem;
+  box-sizing: border-box;
   animation: escalation-fadeIn 0.45s ease-out;
 }
 
@@ -15,48 +17,77 @@
 
 .escalation-header {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 auto 1.25rem;
+  width: 100%;
+  max-width: 760px;
+  text-align: center;
+}
+
+.escalation-branding {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 0.2rem;
+}
+
+.escalation-logo {
+  width: min(240px, 100%);
+  max-height: 86px;
+  object-fit: contain;
+  display: block;
+}
+
+.escalation-heading-block {
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+  text-align: center;
 }
 
 .escalation-title {
   color: #0f172a;
-  font-size: 2.2rem;
+  font-size: 1.2rem;
   font-weight: 800;
-  letter-spacing: -0.02em;
-  margin-bottom: 0.25rem;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.1rem;
+  text-transform: uppercase;
 }
 
 .escalation-subtitle {
   color: #475569;
-  font-size: 1rem;
+  font-size: 0.8rem;
+  margin-top: 0;
 }
 
 .escalation-summary {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-  background: linear-gradient(135deg, rgba(254, 242, 242, 0.9), rgba(254, 226, 226, 0.8));
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: 12px;
-  padding: 1.25rem 1.75rem;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.08);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  margin-top: 0.3rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .summary-count {
-  font-size: 2rem;
+  font-size: 1.05rem;
   font-weight: 800;
-  color: #dc2626;
+  color: #0f172a;
   line-height: 1;
 }
 
 .summary-label {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: #991b1b;
+  color: #475569;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .escalation-stack {
@@ -106,20 +137,6 @@
   gap: 0.75rem;
   flex-wrap: nowrap;
   width: 100%;
-}
-
-.contractor-badge {
-  background-color: rgba(37, 99, 235, 0.1);
-  color: #2563eb;
-  border: 1px solid rgba(37, 99, 235, 0.25);
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.5rem 0.875rem;
-  border-radius: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .email-contractor-btn {
